@@ -35,3 +35,42 @@ import { betaFirst3 } from "../matrix/textEncoder/layer_3/betaFirst3";
 import { betaSecond3 } from "../matrix/textEncoder/layer_3/betaSecond3";
 import { FFNinput3 } from "../matrix/textEncoder/layer_3/FFNinput3";
 import { FFNoutput3 } from "../matrix/textEncoder/layer_3/FFNoutput3";
+
+
+export const tokenize = (text: string): number[] => {
+    const charToIdx: { [key: string]: number } = {};
+    for (const [idx, char] of Object.entries(vocab)) {
+        charToIdx[char] = parseInt(idx);
+    }
+    const tokens: number[] = [];
+    for (const char of text) {
+        tokens.push(charToIdx[char] ?? charToIdx['[UNK]']);
+    }
+    return tokens;
+};
+
+export const convertToEmb = (text: string) => {
+    const tokensIndex = tokenize(text)
+
+    const embArr: number[][] = []
+    for (let i = 0; i < tokensIndex.length; i++) {
+        embArr.push(embeddings[tokensIndex[i]])
+    }
+
+    for (let i = 0; i < (positionMatrix.length - tokensIndex.length); i++) {
+        embArr.push(new Array(48).fill(0))
+    }
+
+    return embArr
+}
+
+export const summWithPos = (text: string) => {
+    const embs = convertToEmb(text)
+    for (let i = 0; i < embs.length; i++) {
+        for (let j = 0; j < embs[i].length; j++) {
+            embs[i][j] += positionMatrix[i][j]
+        }
+    }
+
+    return embs
+}

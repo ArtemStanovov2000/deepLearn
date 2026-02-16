@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
+import { summWithPos } from './logic/logic';
 
-// Стили, определённые прямо в компоненте
 const stylesDarkTextDisplay = {
   container: {
     backgroundColor: '#1e1e1e',
@@ -59,6 +59,8 @@ const DarkTextDisplay: React.FC = () => {
   const [inputText, setInputText] = useState('ноль');
   const [displayText, setDisplayText] = useState('ноль');
   const [isProcessing, setIsProcessing] = useState(false);
+
+  console.log(summWithPos(displayText))
 
   const handleStart = async () => {
     if (isProcessing) return;
