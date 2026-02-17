@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
-import { summWithPos } from './logic/logic';
+import { textEncoder } from './logic/textEncoder';
+import { imageEncoder } from './logic/imageEncoder';
+import arr from "./data/arr.json"
+import DigitCanvas from './DigitCanvas';
 
 const stylesDarkTextDisplay = {
   container: {
@@ -59,8 +62,10 @@ const DarkTextDisplay: React.FC = () => {
   const [inputText, setInputText] = useState('ноль');
   const [displayText, setDisplayText] = useState('ноль');
   const [isProcessing, setIsProcessing] = useState(false);
-
-  console.log(summWithPos(displayText))
+  
+  console.time()
+  console.log(imageEncoder(arr[1].value))
+  console.timeEnd()
 
   const handleStart = async () => {
     if (isProcessing) return;
@@ -115,7 +120,9 @@ const DarkTextDisplay: React.FC = () => {
           {isProcessing && <div>Длина: {displayText.length}/64</div>}
         </div>
       )}
+      <DigitCanvas label={arr[1].key} pixels={arr[1].value} />
     </div>
+
   );
 };
 
