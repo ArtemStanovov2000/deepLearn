@@ -1,8 +1,5 @@
 import React, { useState } from 'react';
-import { textEncoder } from './logic/textEncoder';
-import { imageEncoder } from './logic/imageEncoder';
-import arr from "./data/arr.json"
-import DigitCanvas from './DigitCanvas';
+import { train } from './logic/train';
 
 const stylesDarkTextDisplay = {
   container: {
@@ -62,9 +59,9 @@ const DarkTextDisplay: React.FC = () => {
   const [inputText, setInputText] = useState('ноль');
   const [displayText, setDisplayText] = useState('ноль');
   const [isProcessing, setIsProcessing] = useState(false);
-  
+
   console.time()
-  console.log(imageEncoder(arr[1].value))
+  console.log(train())
   console.timeEnd()
 
   const handleStart = async () => {
@@ -120,7 +117,6 @@ const DarkTextDisplay: React.FC = () => {
           {isProcessing && <div>Длина: {displayText.length}/64</div>}
         </div>
       )}
-      <DigitCanvas label={arr[1].key} pixels={arr[1].value} />
     </div>
 
   );

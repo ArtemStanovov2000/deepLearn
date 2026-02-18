@@ -192,7 +192,7 @@ const applyLayer = (x: number[][], real_len: number,
 };
 
 // полный прямой проход
-export const textEncoder = (text: string): number[][] => {
+export const textEncoder = (text: string): number[] => {
     const X = summWithPos(text);
     const real_len = tokenize(text).length;
 
@@ -200,5 +200,5 @@ export const textEncoder = (text: string): number[][] => {
     const outLayer2 = applyLayer(outLayer1, real_len, Wq2, Wk2, Wv2, Wo2, gammaFirst2, betaFirst2, gammaSecond2, betaSecond2, FFNinput2, FFNoutput2);
     const outLayer3 = applyLayer(outLayer2, real_len, Wq3, Wk3, Wv3, Wo3, gammaFirst3, betaFirst3, gammaSecond3, betaSecond3, FFNinput3, FFNoutput3);
 
-    return outLayer3;
+    return outLayer3[real_len - 1];
 };
