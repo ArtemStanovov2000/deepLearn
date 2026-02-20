@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { train } from './logic/train';
+import { calculateLoss } from './logic/calculateLoss';
 
 const stylesDarkTextDisplay = {
   container: {
@@ -61,7 +61,7 @@ const DarkTextDisplay: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
 
   console.time()
-  console.log(train())
+  console.log(calculateLoss())
   console.timeEnd()
 
   const handleStart = async () => {
@@ -71,7 +71,7 @@ const DarkTextDisplay: React.FC = () => {
     let currentString = inputText;
     setDisplayText(currentString);
 
-    /*while (currentString.length < 64) {
+    while (currentString.length < 64) {
       try {
         const newToken = await Promise.resolve(createNewToken(currentString));
         currentString += newToken.token;
@@ -82,7 +82,7 @@ const DarkTextDisplay: React.FC = () => {
         console.error('Error in createNewToken:', error);
         break;
       }
-    }*/
+    }
 
     setIsProcessing(false);
   };

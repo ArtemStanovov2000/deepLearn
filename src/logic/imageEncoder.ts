@@ -1,7 +1,13 @@
 import { layerMap1 } from "../matrix/imageEncoder/layer1/layer1";
 import { layerMap2 } from "../matrix/imageEncoder/layer1/layer2";
-import { linearLayer } from "../matrix/imageEncoder/layer1/linearLayer"; // number[48][1250]
-import { linearBias } from "../matrix/imageEncoder/layer1/linearBias"; // number[48]
+import { linearLayer } from "../matrix/imageEncoder/layer1/linearLayer"; // 48x1250
+import { linearBias } from "../matrix/imageEncoder/layer1/linearBias"; // 48
+
+// Новые импорты
+import { conv1Bias } from "../matrix/imageEncoder/layer1/conv1Bias";
+import { conv2Bias } from "../matrix/imageEncoder/layer1/conv2Bias";
+import { normWeight } from "../matrix/imageEncoder/layer1/normWeight";
+import { normBias } from "../matrix/imageEncoder/layer1/normBias";
 
 const buildImage = (imageData: number[]): number[][] => {
   const image: number[][] = [];
@@ -20,19 +26,25 @@ const applyReLU = (featureMaps: number[][][]): number[][][] => {
   );
 };
 
-const masking = (
-  image: number[][],
-  masks: { index: number; map: number[][] }[]
-): number[][][] => {
-  const sortedMasks = [...masks].sort((a, b) => a.index - b.index);
-  const kernelSize = sortedMasks[0].map.length;
+// Добавление bias к картам признаков после свёртки
+const addBias = (featureMaps: number[][][], bias: number[]): number[][][] => {
+  return featureMaps.map((map, idx) =>
+    map.map(row =>
+      row.map(val => val + bias[idx])
+    )
+  );
+};
+
+const masking = (image: number[][], kernels: number[][][]): number[][][] => {
+  const outChannels = kernels.length;
+  const kernelSize = kernels[0].length;
   const imageSize = image.length;
   const outputSize = imageSize - kernelSize + 1;
 
   const result: number[][][] = [];
 
-  for (const mask of sortedMasks) {
-    const kernel = mask.map;
+  for (let outC = 0; outC < outChannels; outC++) {
+    const kernel = kernels[outC];
     const featureMap: number[][] = [];
 
     for (let i = 0; i < outputSize; i++) {
@@ -62,7 +74,7 @@ const masking3d = (
   const height = input[0].length;
   const width = input[0][0].length;
   const outChannels = kernels.length;
-  const kernelSize = kernels[0][0].length; // предполагаем квадратные ядра
+  const kernelSize = kernels[0][0].length;
 
   const outHeight = height - kernelSize + 1;
   const outWidth = width - kernelSize + 1;
@@ -94,10 +106,9 @@ const masking3d = (
   return result;
 };
 
-// Max pooling с окном 2x2 и шагом 2.
 const maxPooling2x2 = (featureMaps: number[][][]): number[][][] => {
   const numMaps = featureMaps.length;
-  const inputSize = featureMaps[0].length; // квадратные карты
+  const inputSize = featureMaps[0].length;
   const outputSize = Math.floor(inputSize / 2);
 
   const pooled: number[][][] = [];
@@ -125,8 +136,6 @@ const maxPooling2x2 = (featureMaps: number[][][]): number[][][] => {
   return pooled;
 };
 
-
-// Преобразует трёхмерный массив карт признаков в одномерный вектор.
 const flatten = (featureMaps: number[][][]): number[] => {
   const flat: number[] = [];
   for (const map of featureMaps) {
@@ -144,13 +153,25 @@ const linearForward = (input: number[], weights: number[][], bias: number[]): nu
   for (let i = 0; i < outputSize; i++) {
     let sum = bias[i];
     const row = weights[i];
-    // Скалярное произведение входного вектора и строки весов
     for (let j = 0; j < input.length; j++) {
       sum += input[j] * row[j];
     }
     output[i] = sum;
   }
   return output;
+};
+
+// Layer Normalisation
+const layerNorm = (
+  x: number[],
+  weight: number[],
+  bias: number[],
+  eps: number = 1e-5
+): number[] => {
+  const mean = x.reduce((a, b) => a + b, 0) / x.length;
+  const variance = x.reduce((a, b) => a + (b - mean) ** 2, 0) / x.length;
+  const std = Math.sqrt(variance + eps);
+  return x.map((val, i) => ((val - mean) / std) * weight[i] + bias[i]);
 };
 
 export const imageEncoder = (imageData: number[]): number[] => {
@@ -160,13 +181,15 @@ export const imageEncoder = (imageData: number[]): number[] => {
   // 2. Построение матрицы 28x28
   const imageArr = buildImage(normalized);
 
-  // 3. Первый свёрточный слой + ReLU + MaxPooling
-  const conv1 = masking(imageArr, layerMap1);
+  // 3. Первый свёрточный слой + bias + ReLU + MaxPooling
+  let conv1 = masking(imageArr, layerMap1);
+  conv1 = addBias(conv1, conv1Bias);            // добавляем bias для 20 каналов
   const activated1 = applyReLU(conv1);
   const pool1 = maxPooling2x2(activated1);
 
-  // 4. Второй свёрточный слой + ReLU + MaxPooling
-  const conv2 = masking3d(pool1, layerMap2);
+  // 4. Второй свёрточный слой + bias + ReLU + MaxPooling
+  let conv2 = masking3d(pool1, layerMap2);
+  conv2 = addBias(conv2, conv2Bias);            // добавляем bias для 50 каналов
   const activated2 = applyReLU(conv2);
   const pool2 = maxPooling2x2(activated2);
 
@@ -174,7 +197,10 @@ export const imageEncoder = (imageData: number[]): number[] => {
   const encoded = flatten(pool2);
 
   // 6. Полносвязный слой (проекция в 48)
-  const output = linearForward(encoded, linearLayer, linearBias);
+  const fcOut = linearForward(encoded, linearLayer, linearBias);
 
-  return output;
+  // 7. Layer Normalization на выходе энкодера
+  const normalizedOut = layerNorm(fcOut, normWeight, normBias);
+
+  return normalizedOut;
 };
